@@ -66,6 +66,9 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
+# macOS
+.DS_Store
+
 # Audio files (keep some examples but ignore large collections)
 *.wav
 *.mp3
