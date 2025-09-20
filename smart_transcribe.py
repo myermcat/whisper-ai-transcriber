@@ -32,13 +32,27 @@ class WhisperTranscriber:
         self.model = whisper.load_model(model_size)
         print("✅ Model loaded successfully!")
     
-    def show_progress_dots(self):
-        """Show animated progress dots while processing"""
+    def show_progress_with_percentage(self, start_time, estimated_duration):
+        """Show progress with percentage and time estimates"""
         dots = 0
         while self.processing_active:
-            print(f"\r🎤 Processing{'.' * (dots % 4)}{' ' * (3 - dots % 4)}", end="", flush=True)
+            elapsed_time = time.time() - start_time
+            
+            # Calculate estimated progress (rough approximation)
+            if estimated_duration > 0:
+                estimated_progress = min(95, (elapsed_time / (estimated_duration * 60)) * 100)
+                remaining_time = max(0, (estimated_duration * 60) - elapsed_time)
+                
+                print(f"\r🎤 Processing{'.' * (dots % 4)}{' ' * (3 - dots % 4)} "
+                      f"~{estimated_progress:.0f}% complete, ~{remaining_time/60:.1f}min left", 
+                      end="", flush=True)
+            else:
+                print(f"\r🎤 Processing{'.' * (dots % 4)}{' ' * (3 - dots % 4)} "
+                      f"Elapsed: {elapsed_time/60:.1f}min", 
+                      end="", flush=True)
+            
             dots += 1
-            time.sleep(0.5)
+            time.sleep(2)  # Update every 2 seconds
     
     def get_file_duration_estimate(self, file_path):
         """Get rough estimate of file duration for time estimation"""
@@ -70,7 +84,18 @@ class WhisperTranscriber:
         
         return sorted(valid_files)
     
-    def transcribe_file(self, file_path):
+    def ask_timestamp_preference(self):
+        """Ask user if they want timestamps in the transcript"""
+        while True:
+            choice = input("\n📝 Do you want timestamps in the transcript? (y/n): ").strip().lower()
+            if choice in ['y', 'yes']:
+                return True
+            elif choice in ['n', 'no']:
+                return False
+            else:
+                print("Please enter 'y' for yes or 'n' for no.")
+
+    def transcribe_file(self, file_path, include_timestamps=None):
         """Transcribe a single audio/video file with progress tracking"""
         try:
             print(f"\n{'='*60}")
@@ -84,11 +109,20 @@ class WhisperTranscriber:
             print(f"📊 File size: {file_size_mb:.1f} MB")
             print(f"⏱️  Estimated duration: ~{estimated_minutes:.1f} minutes")
             print(f"⏳ Estimated processing time: ~{estimated_minutes * 0.5:.1f}-{estimated_minutes * 2:.1f} minutes")
-            print("\n🔄 Starting transcription...")
             
-            # Start progress indicator
+            # Ask about timestamps if not specified
+            if include_timestamps is None:
+                include_timestamps = self.ask_timestamp_preference()
+            
+            print(f"\n🔄 Starting transcription...")
+            print(f"📝 Output format: {'With timestamps' if include_timestamps else 'Plain text'}")
+            
+            # Start progress indicator with percentage
             self.processing_active = True
-            progress_thread = threading.Thread(target=self.show_progress_dots)
+            progress_thread = threading.Thread(
+                target=self.show_progress_with_percentage, 
+                args=(time.time(), estimated_minutes * 1.5)  # Use 1.5x estimated time for processing
+            )
             progress_thread.daemon = True
             progress_thread.start()
             
@@ -115,28 +149,29 @@ class WhisperTranscriber:
             print(result["text"])
             print("="*60)
             
-            # Save to text file in Outputs folder
-            output_filename = f"{file_path.stem}_transcript.txt"
-            output_path = self.outputs_dir / output_filename
-            
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(result["text"])
-            
-            print(f"\n💾 Transcript saved to: {output_path}")
-            
-            # Also save with timestamps if available
-            if "segments" in result and result["segments"]:
-                timestamp_filename = f"{file_path.stem}_transcript_with_timestamps.txt"
-                timestamp_path = self.outputs_dir / timestamp_filename
+            # Save transcript based on user preference
+            if include_timestamps and "segments" in result and result["segments"]:
+                # Save with timestamps
+                output_filename = f"{file_path.stem}_transcript_with_timestamps.txt"
+                output_path = self.outputs_dir / output_filename
                 
-                with open(timestamp_path, 'w', encoding='utf-8') as f:
+                with open(output_path, 'w', encoding='utf-8') as f:
                     for segment in result["segments"]:
                         start_time = segment["start"]
                         end_time = segment["end"]
                         text = segment["text"].strip()
                         f.write(f"[{start_time:.2f}s - {end_time:.2f}s] {text}\n")
                 
-                print(f"⏰ Transcript with timestamps saved to: {timestamp_path}")
+                print(f"\n💾 Transcript with timestamps saved to: {output_path}")
+            else:
+                # Save plain text
+                output_filename = f"{file_path.stem}_transcript.txt"
+                output_path = self.outputs_dir / output_filename
+                
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    f.write(result["text"])
+                
+                print(f"\n💾 Plain text transcript saved to: {output_path}")
             
             return result["text"]
             
@@ -210,11 +245,16 @@ class WhisperTranscriber:
         
         if choice == "all":
             print(f"\n🔄 Processing all {len(valid_files)} files...")
+            
+            # Ask about timestamps once for all files
+            include_timestamps = self.ask_timestamp_preference()
+            print(f"📝 Using {'timestamps' if include_timestamps else 'plain text'} for all files")
+            
             total_start_time = time.time()
             
             for i, file_path in enumerate(valid_files, 1):
                 print(f"\n📁 [{i}/{len(valid_files)}] Processing {file_path.name}...")
-                self.transcribe_file(file_path)
+                self.transcribe_file(file_path, include_timestamps)
                 
                 # Show progress for batch processing
                 if i < len(valid_files):
