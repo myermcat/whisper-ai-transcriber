@@ -3,6 +3,8 @@
 import os
 import ssl
 import urllib.request
+import time
+import threading
 from pathlib import Path
 
 # Disable SSL verification before importing whisper
@@ -17,6 +19,7 @@ class WhisperTranscriber:
         self.supported_formats = {'.mp3', '.mp4', '.wav', '.m4a', '.aac', '.ogg', '.wma', '.flac', '.avi', '.mov', '.mkv'}
         self.inputs_dir = Path("Inputs")
         self.outputs_dir = Path("Outputs")
+        self.processing_active = False
         
         # Create directories if they don't exist
         self.inputs_dir.mkdir(exist_ok=True)
@@ -24,9 +27,36 @@ class WhisperTranscriber:
     
     def load_model(self, model_size="base"):
         """Load Whisper model"""
-        print(f"Loading Whisper {model_size} model...")
+        print(f"🔄 Loading Whisper {model_size} model...")
+        print("   (This may take a moment on first run - downloading model)")
         self.model = whisper.load_model(model_size)
-        print("Model loaded successfully!")
+        print("✅ Model loaded successfully!")
+    
+    def show_progress_dots(self):
+        """Show animated progress dots while processing"""
+        dots = 0
+        while self.processing_active:
+            print(f"\r🎤 Processing{'.' * (dots % 4)}{' ' * (3 - dots % 4)}", end="", flush=True)
+            dots += 1
+            time.sleep(0.5)
+    
+    def get_file_duration_estimate(self, file_path):
+        """Get rough estimate of file duration for time estimation"""
+        try:
+            # Get file size and estimate duration based on typical bitrates
+            file_size_mb = file_path.stat().st_size / (1024 * 1024)
+            
+            # Rough estimates based on typical audio/video bitrates
+            if file_path.suffix.lower() in ['.mp3', '.wav', '.m4a', '.aac', '.ogg']:
+                # Audio: ~1MB per minute for decent quality
+                estimated_minutes = file_size_mb
+            else:
+                # Video: ~10-50MB per minute depending on quality
+                estimated_minutes = file_size_mb / 20  # Conservative estimate
+            
+            return max(1, estimated_minutes)  # At least 1 minute
+        except:
+            return 5  # Default estimate if we can't determine
     
     def get_valid_files(self):
         """Get all valid audio/video files from Inputs folder"""
@@ -41,19 +71,49 @@ class WhisperTranscriber:
         return sorted(valid_files)
     
     def transcribe_file(self, file_path):
-        """Transcribe a single audio/video file"""
+        """Transcribe a single audio/video file with progress tracking"""
         try:
             print(f"\n{'='*60}")
-            print(f"Transcribing: {file_path.name}")
+            print(f"🎬 Transcribing: {file_path.name}")
             print(f"{'='*60}")
             
+            # Get file info and estimates
+            file_size_mb = file_path.stat().st_size / (1024 * 1024)
+            estimated_minutes = self.get_file_duration_estimate(file_path)
+            
+            print(f"📊 File size: {file_size_mb:.1f} MB")
+            print(f"⏱️  Estimated duration: ~{estimated_minutes:.1f} minutes")
+            print(f"⏳ Estimated processing time: ~{estimated_minutes * 0.5:.1f}-{estimated_minutes * 2:.1f} minutes")
+            print("\n🔄 Starting transcription...")
+            
+            # Start progress indicator
+            self.processing_active = True
+            progress_thread = threading.Thread(target=self.show_progress_dots)
+            progress_thread.daemon = True
+            progress_thread.start()
+            
+            # Record start time
+            start_time = time.time()
+            
+            # Perform transcription
             result = self.model.transcribe(str(file_path))
             
+            # Stop progress indicator
+            self.processing_active = False
+            progress_thread.join(timeout=1)
+            
+            # Calculate actual processing time
+            processing_time = time.time() - start_time
+            
+            print(f"\r✅ Transcription completed in {processing_time:.1f} seconds!")
+            print(f"📈 Processing speed: {estimated_minutes * 60 / processing_time:.1f}x real-time")
+            
             # Print the transcription
-            print("\nTRANSCRIPTION:")
-            print("-" * 40)
+            print("\n" + "="*60)
+            print("📝 TRANSCRIPTION:")
+            print("="*60)
             print(result["text"])
-            print("-" * 40)
+            print("="*60)
             
             # Save to text file in Outputs folder
             output_filename = f"{file_path.stem}_transcript.txt"
@@ -62,7 +122,7 @@ class WhisperTranscriber:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(result["text"])
             
-            print(f"\nTranscript saved to: {output_path}")
+            print(f"\n💾 Transcript saved to: {output_path}")
             
             # Also save with timestamps if available
             if "segments" in result and result["segments"]:
@@ -76,12 +136,13 @@ class WhisperTranscriber:
                         text = segment["text"].strip()
                         f.write(f"[{start_time:.2f}s - {end_time:.2f}s] {text}\n")
                 
-                print(f"Transcript with timestamps saved to: {timestamp_path}")
+                print(f"⏰ Transcript with timestamps saved to: {timestamp_path}")
             
             return result["text"]
             
         except Exception as e:
-            print(f"Error transcribing {file_path.name}: {e}")
+            self.processing_active = False
+            print(f"\r❌ Error transcribing {file_path.name}: {e}")
             return None
     
     def show_file_selection_menu(self, files):
@@ -149,9 +210,21 @@ class WhisperTranscriber:
         
         if choice == "all":
             print(f"\n🔄 Processing all {len(valid_files)} files...")
+            total_start_time = time.time()
+            
             for i, file_path in enumerate(valid_files, 1):
-                print(f"\n[{i}/{len(valid_files)}] Processing {file_path.name}...")
+                print(f"\n📁 [{i}/{len(valid_files)}] Processing {file_path.name}...")
                 self.transcribe_file(file_path)
+                
+                # Show progress for batch processing
+                if i < len(valid_files):
+                    elapsed = time.time() - total_start_time
+                    avg_time_per_file = elapsed / i
+                    remaining_files = len(valid_files) - i
+                    estimated_remaining = avg_time_per_file * remaining_files
+                    
+                    print(f"⏳ Batch progress: {i}/{len(valid_files)} complete")
+                    print(f"📊 Estimated time remaining: {estimated_remaining/60:.1f} minutes")
         else:
             self.transcribe_file(choice)
         

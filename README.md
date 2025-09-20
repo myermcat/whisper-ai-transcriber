@@ -2,6 +2,14 @@
 
 A smart transcription tool that uses OpenAI's Whisper AI to transcribe audio and video files.
 
+## 🆓 **Completely FREE!**
+
+**Whisper AI is 100% free and does NOT use your OpenAI credits!**
+- ✅ **Local Processing**: Runs entirely on your computer
+- ✅ **No Internet Required**: Works offline after initial model download
+- ✅ **No API Calls**: No server requests or usage limits
+- ✅ **Open Source**: Free forever, no subscriptions
+
 ## Features
 
 - 🎯 **Smart File Detection**: Automatically finds audio/video files in the `Inputs` folder
@@ -9,6 +17,8 @@ A smart transcription tool that uses OpenAI's Whisper AI to transcribe audio and
 - 📝 **Interactive Selection**: Choose specific files or process all at once
 - ⏱️ **Timestamps**: Generates transcripts with and without timestamps
 - 📁 **Organized Output**: Saves results in the `Outputs` folder
+- 📊 **Progress Tracking**: Real-time progress indicators and time estimates
+- 🚀 **Performance Stats**: Shows processing speed and completion times
 
 ## Setup
 
@@ -53,6 +63,28 @@ The script creates two types of output files in the `Outputs` folder:
 
 1. **Basic Transcript**: `filename_transcript.txt` - Clean text transcription
 2. **Timestamped Transcript**: `filename_transcript_with_timestamps.txt` - Includes timing information
+
+## Progress Tracking
+
+The script now shows detailed progress information:
+
+- 📊 **File Analysis**: File size and estimated duration
+- ⏳ **Time Estimates**: Estimated processing time before starting
+- 🎤 **Live Progress**: Animated progress dots during processing
+- ⚡ **Performance Stats**: Actual processing time and speed (e.g., "3.2x real-time")
+- 📈 **Batch Progress**: Progress tracking for multiple files with time remaining estimates
+
+Example output:
+```
+🎬 Transcribing: meeting.mp3
+📊 File size: 15.2 MB
+⏱️  Estimated duration: ~15.1 minutes
+⏳ Estimated processing time: ~7.6-30.2 minutes
+🔄 Starting transcription...
+🎤 Processing....
+✅ Transcription completed in 180.5 seconds!
+📈 Processing speed: 5.0x real-time
+```
 
 ## Supported File Formats
 
