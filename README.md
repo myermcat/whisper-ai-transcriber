@@ -31,10 +31,8 @@ A smart transcription tool that uses OpenAI's Whisper AI to transcribe audio and
 
 ### Quick Start
 ```bash
-python3 smart_transcribe.py
+python3 transcribe.py
 ```
-
-> **Note**: This is the only transcription script you need. The old `simple_transcribe.py` and `transcribe.py` files have been removed as they were outdated and less functional.
 
 ### How It Works
 
@@ -99,7 +97,7 @@ Example output:
 
 ## Scripts
 
-- `smart_transcribe.py` - **Main Script**: Interactive file selection, progress tracking, and batch processing
+- `transcribe.py` - Interactive file selection, progress tracking, and batch processing
 
 ## 📝 **Complete Meeting Notes Workflow**
 
@@ -132,7 +130,7 @@ Example output:
 
 3. **Run the transcription:**
    ```bash
-   python3 smart_transcribe.py
+   python3 transcribe.py
    ```
    
    The script will:
