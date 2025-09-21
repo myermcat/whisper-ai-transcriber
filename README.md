@@ -144,7 +144,44 @@ Example output:
 4. **Use AI for meeting summaries:**
    - Copy transcript content from `Outputs/` folder
    - Paste into ChatGPT, Claude, or any AI assistant
-   - Use prompt: `"Please analyze this meeting transcript and create structured meeting notes with: 1) Key decisions made, 2) Action items with owners, 3) Important discussions, 4) Next steps. Format as a professional meeting summary."`
+   - Use this prompt:
+
+## 📝 Meeting Notes Prompt
+
+**Input:** Transcript of the meeting.
+
+**Output:** Summarized and structured notes with 4 sections.
+
+⸻
+
+**1. Brief Overview (1 paragraph + a few bullets)**
+• Short description of what the meeting was about (overall topic / purpose).
+• Key themes discussed.
+• Who was talked to (if relevant), but not who was present.
+• Keep it very concise (no more than a paragraph and ~3 bullets).
+
+⸻
+
+**2. Detailed Notes (Structured)**
+• Expand all important points from the transcript.
+• Maintain clear structure with subheadings (e.g., topics, agenda items, questions raised).
+• Do not omit anything important.
+• Use bullet points or numbering for clarity.
+
+⸻
+
+**3. Overview Action Points / Strategy Shifts**
+• List overall outcomes of the meeting.
+• Highlight any strategic direction changes, decisions, or clarified goals.
+• Summarize as a set of 3–6 bullets (not too granular).
+
+⸻
+
+**4. Detailed Action Points (To-Do List)**
+• Write down specific tasks that came out of the meeting.
+• If it's clear who is responsible, list under that person's name (group by person).
+• If responsibility isn't clear, list under "General / Unassigned."
+• Each action point should be a clear, actionable task.
 
 5. **Process multiple files:**
    - For multiple recordings, process them one at a time with AI
